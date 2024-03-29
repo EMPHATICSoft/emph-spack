@@ -19,7 +19,7 @@ class Emphaticsoft(CMakePackage):
     maintainers("gavinsdavies")
     license("Apache-2.0")
 
-    version("main", branch="main", "get_full_repo=True")
+    version("main", branch="main", get_full_repo=True)
 
     depends_on("art")
     depends_on("art_root_io")
