@@ -40,8 +40,8 @@ class Emphaticsoft(CMakePackage):
 
     # art dependencies
     depends_on("art")
-    depends_on("art_root_io")
-    depends_on("canvas_root_io")
+    depends_on("art-root-io")
+    depends_on("canvas-root-io")
     depends_on("cetlib")
     depends_on("cetlib-except")
     depends_on("fhicl-cpp")
@@ -49,7 +49,7 @@ class Emphaticsoft(CMakePackage):
 
     # DAQ dependencies
     depends_on("artdaq")
-    depends_on("artdaq_core")
+    depends_on("artdaq-core")
 
     # ROOT with specific components required by emphaticsoft
     # Components needed: 
