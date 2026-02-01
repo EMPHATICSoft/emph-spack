@@ -1,0 +1,6 @@
+# emph-specs.yaml
+# Define reusable spec variables for EMPHATIC
+
+definitions:
+  - specs_emph:
+    - emphaticsoft %build_compiler

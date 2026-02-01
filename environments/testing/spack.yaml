@@ -1,0 +1,31 @@
+# EMPHATIC Testing Environment
+# Location: emph-spack/environments/testing/spack.yaml
+#
+# Usage:
+#   cd emph-spack/environments/testing
+#   spack env activate .
+#   spack install
+
+spack:
+  # Include shared EMPHATIC configuration
+  include:
+    - path: ../../configs/emph-release.yaml
+  
+  # Environment-specific specs (override/extend the shared config)
+  specs:
+    - emphaticsoft@spack-dev %gcc@12 cxxstd=17 build_type=Debug
+    - $specs_larsoft
+    - $specs_nusofthep
+    - $specs_art
+    - $fife_specs
+  
+  # Environment-specific overrides
+  packages:
+    emphaticsoft:
+      variants: build_type=Debug  # Override for testing
+  
+  concretizer:
+    unify: true
+    reuse: dependencies
+  
+  view: false

@@ -17,8 +17,12 @@ class Emphaticsoft(CMakePackage):
     maintainers("gavinsdavies")
     license("Apache-2.0")
 
+    # Version definitions
+    version("develop", branch="develop")
     version("main", branch="main")
-    version("spack-dev", branch="spack-dev")
+    version("spack-dev", branch="spack-dev", preferred=True)
+    # Tagged releases (map UPS v06_02_00 → Spack 6.2.0)
+    # version("6.2.0", tag="v06_02_00", commit="abc123def456")
 
     variant(
         "cxxstd",
@@ -39,17 +43,19 @@ class Emphaticsoft(CMakePackage):
     depends_on("boost+iostreams+math+serialization")
 
     # art dependencies
-    depends_on("art")
-    depends_on("art-root-io")
-    depends_on("canvas-root-io")
-    depends_on("cetlib")
-    depends_on("cetlib-except")
-    depends_on("fhicl-cpp")
-    depends_on("messagefacility")
+    # TODO: Re-enable when environment can resolve art packages
+    # depends_on("art")
+    # depends_on("art-root-io")
+    # depends_on("canvas-root-io")
+    # depends_on("cetlib")
+    # depends_on("cetlib-except")
+    # depends_on("fhicl-cpp")  # Package exists but has hyphen issues
+    # depends_on("messagefacility")
 
     # DAQ dependencies
-    depends_on("artdaq")
-    depends_on("artdaq-core")
+    # TODO: Re-enable when packages are available
+    # depends_on("artdaq")
+    # depends_on("artdaq-core")
 
     # ROOT with specific components required by emphaticsoft
     # Components needed: 
@@ -58,23 +64,37 @@ class Emphaticsoft(CMakePackage):
     # Minuit2, Net, Physics, RIO, Spectrum, TMVA,
     # Thread, Tree, TreePlayer, X3d, XMLIO
     # TODO: Verify if all these components are needed
-    depends_on("root+gdml+minuit+spectrum+tmva+x+xml+threads")
+    #depends_on("root+gdml+minuit+spectrum+tmva+x+xml+threads")
     # Simulation dependencies
-    depends_on("geant4")
+    #depends_on("geant4")
 
-    # Data Handline & Database dependencies
-    depends_on("ifdh_art")
-    depends_on("ifbeam")
-    depends_on("nucondb")
+    # Data Handling & Database dependencies
+    # TODO: Re-enable when packages are created
+    # depends_on("ifdh_art")
+    # depends_on("ifbeam")
+    # depends_on("nucondb")
 
     # Other dependencies
-    depends_on("milliepede-ii")
-    depends_on("libtorch")
-    depends_on("protobuf")
-    depends_on("nlohmann-json")
+    # TODO: Re-enable when packages are available
+    # depends_on("milliepede-ii")
+    # depends_on("libtorch")
+    # depends_on("protobuf")
+    #depends_on("nlohmann-json")
     
     # Python dependencies
-    depends_on("python")
+    #depends_on("python")
+
+    # Build configuration
+    def cmake_args(self):
+        args = [
+            self.define_from_variant("CMAKE_CXX_STANDARD", "cxxstd"),
+            self.define_from_variant("CMAKE_BUILD_TYPE", "build_type"),
+        ]
+        return args
+    
+    def setup_build_environment(self, env):
+        env.set("CETMODULES_DIR", self.spec["cetmodules"].prefix)
+        env.prepend_path("CMAKE_PREFIX_PATH", self.spec["cetmodules"].prefix)
 
     def setup_run_environment(self, env):
         prefix = self.prefix

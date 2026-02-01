@@ -1,0 +1,13 @@
+# emph-packages.yaml
+# Package-specific preferences and constraints for EMPHATIC
+
+packages:
+  emphaticsoft:
+    require:
+      - "@=spack-dev"
+  
+  # Add external package specifications if available
+  # Example:
+  root:
+    require:
+    - +xrootd

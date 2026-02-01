@@ -1,0 +1,60 @@
+# emph-release.yaml
+# Shared configuration for EMPHATIC Spack environments
+# Include this in individual environments to inherit common settings
+
+# Include package preferences and specs
+include:
+  # Toolchain
+  - path: https://raw.githubusercontent.com/art-framework-suite/art-release-configs/refs/heads/main/included_yaml/gcc-12-toolchain.yaml
+    sha256: b769ddee1cff92c88b22cc968bc192a37d5fe863e6e224aeac5697a89480c5ca
+  # EMPHATIC packages and specs
+  - path: ./included_yaml/emph-packages.yaml
+  - path: ./included_yaml/emph-specs.yaml
+
+  # LArSoft
+  - path: https://raw.githubusercontent.com/LArSoft/larsoft-release-configs/refs/heads/main/included_yaml/larsoft-packages.yaml
+    sha256: 79189dce1ceee3db1672da87b2af878c113f28f5041e7b29f4ff755d9a017f94
+  - path: https://raw.githubusercontent.com/LArSoft/larsoft-release-configs/refs/heads/main/included_yaml/larsoft-specs.yaml
+    sha256: a3d4c8646e15a02b284150fe67c9d582ef73c3c4a70f58cc17cbb40334af5752
+
+  # NuSoftHEP
+  - path: https://raw.githubusercontent.com/NuSoftHEP/nusofthep-release-configs/refs/heads/main/included_yaml/nusofthep-packages.yaml
+    sha256: 2d8dea0b6eabcd23d54e4db44a2e20aa4a7742b06a4107bca5ca3d1bc02f29e5
+  - path: https://raw.githubusercontent.com/NuSoftHEP/nusofthep-release-configs/refs/heads/main/included_yaml/nusofthep-specs.yaml
+    sha256: d9c0e0827d133ac6e44c207352baca83bb8d601ecbed260b5980d400571a0e94
+
+  # art
+  - path: https://raw.githubusercontent.com/art-framework-suite/art-release-configs/refs/heads/main/included_yaml/packages-art.yaml
+    sha256: 32bfd398fcb27780263e6d593decbad885995b43852ccaf15788d82c7aed49de
+  - path: https://raw.githubusercontent.com/art-framework-suite/art-release-configs/refs/heads/main/included_yaml/specs-art.yaml
+    sha256: 16e776ee6fea578385fe5ccfd67924fdb442f9219ea0cf3beaad5f6a211b7281
+
+  # FIFE
+  - path: https://raw.githubusercontent.com/fnal-fife/fife-release-configs/refs/heads/main/included_yaml/fife_packages.yaml
+    sha256: b7b7ef7ceaaa947c2cead036409f04aac94f5de357f6b7407699d00d511cfaa3
+  - path: https://raw.githubusercontent.com/fnal-fife/fife-release-configs/refs/heads/main/included_yaml/fife_specs.yaml
+    sha256: b0306775ce16510f7d099d597b3e07cd118f0a178362fdaea0273a8b788eca37
+
+# Upstream installations (use binaries from CVMFS if available)
+upstreams:
+  # Example: Use art/LArSoft from CVMFS
+  cvmfs-larsoft:
+    install_tree: /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.0/spack_env/opt/spack
+
+# Common concretizer settings
+concretizer:
+  unify: true
+  reuse:
+    from:
+    - type: environment
+      path: /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.0/spack_env/var/spack/environments/larsoft-v10_11_01-unified-cuda-python-3_10-trimmed
+
+# Common package preferences
+packages:
+  all:
+    variants:
+      - generator=ninja
+      - build_type=Release
+      - cxxstd=17
+    target:
+      - x86_64_v3
