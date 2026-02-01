@@ -1,6 +1,6 @@
 # emph-spack
 
-spack repository for emphaticsoft packages.
+Spack repository for emphaticsoft packages.
 
 ## Copyright and Licensing
 
