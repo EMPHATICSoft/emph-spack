@@ -18,7 +18,7 @@ class Emphaticsoft(CMakePackage):
     license("Apache-2.0")
 
     version("main", branch="main")
-    version("spack-dev", branch="spack-dev", get_full_repo=True)
+    version("spack-dev", branch="spack-dev")
 
     variant(
         "cxxstd",
