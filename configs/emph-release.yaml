@@ -37,17 +37,18 @@ include:
 
 # Upstream installations (use binaries from CVMFS if available)
 upstreams:
-  # Example: Use art/LArSoft from CVMFS
   cvmfs-larsoft:
     install_tree: /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.0/spack_env/opt/spack
 
-# Common concretizer settings
+# Common concretizer settings (DUNE-style)
 concretizer:
   unify: true
   reuse:
     from:
-    - type: environment
-      path: /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.0/spack_env/var/spack/environments/larsoft-v10_11_01-unified-cuda-python-3_10-trimmed
+    - type: local     # Reuse from local Spack installation
+    - type: external  # Reuse from upstreams (CVMFS) without inheriting config
+  targets:
+    granularity: generic
 
 # Common package preferences
 packages:

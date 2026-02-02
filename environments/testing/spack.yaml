@@ -23,12 +23,10 @@ spack:
   packages:
     all:
       require: '%gcc@12'
-      # Allow building system packages that upstream configs mark as buildable:false
-      buildable: true
     emphaticsoft:
       variants: build_type=Debug  # Override for testing
-  concretizer:
-    unify: true
-    reuse: dependencies
+
+  # Inherit concretizer settings from emph-release.yaml
+  # (No need to override here)
 
   view: false
