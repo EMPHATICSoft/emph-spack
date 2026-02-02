@@ -52,9 +52,9 @@ concretizer:
 # Common package preferences
 packages:
   all:
-    variants:
-      - generator=ninja
-      - build_type=Release
-      - cxxstd=17
     target:
       - x86_64_v3
+  
+  # Only apply these variants to packages that support them
+  emphaticsoft:
+    variants: cxxstd=17 build_type=Release generator=ninja

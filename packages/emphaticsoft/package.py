@@ -44,13 +44,13 @@ class Emphaticsoft(CMakePackage):
 
     # art dependencies
     # TODO: Re-enable when environment can resolve art packages
-    # depends_on("art")
-    # depends_on("art-root-io")
-    # depends_on("canvas-root-io")
-    # depends_on("cetlib")
-    # depends_on("cetlib-except")
-    # depends_on("fhicl-cpp")  # Package exists but has hyphen issues
-    # depends_on("messagefacility")
+    depends_on("art")
+    depends_on("art-root-io")
+    depends_on("canvas-root-io")
+    depends_on("cetlib")
+    depends_on("cetlib-except")
+    depends_on("fhicl-cpp")  # Package exists but has hyphen issues
+    depends_on("messagefacility")
 
     # DAQ dependencies
     # TODO: Re-enable when packages are available
@@ -64,15 +64,16 @@ class Emphaticsoft(CMakePackage):
     # Minuit2, Net, Physics, RIO, Spectrum, TMVA,
     # Thread, Tree, TreePlayer, X3d, XMLIO
     # TODO: Verify if all these components are needed
-    #depends_on("root+gdml+minuit+spectrum+tmva+x+xml+threads")
+    # TOOD: Reinstate "threads" variant when supported
+    depends_on("root+gdml+minuit+spectrum+tmva+x+xml+xrootd")
     # Simulation dependencies
-    #depends_on("geant4")
+    depends_on("geant4")
 
     # Data Handling & Database dependencies
     # TODO: Re-enable when packages are created
-    # depends_on("ifdh_art")
-    # depends_on("ifbeam")
-    # depends_on("nucondb")
+    #depends_on("ifdh_art")
+    #depends_on("ifbeam")
+    #depends_on("nucondb")
 
     # Other dependencies
     # TODO: Re-enable when packages are available

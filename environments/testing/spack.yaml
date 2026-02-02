@@ -9,23 +9,26 @@
 spack:
   # Include shared EMPHATIC configuration
   include:
-    - path: ../../configs/emph-release.yaml
-  
+  - path: ../../configs/emph-release.yaml
+
   # Environment-specific specs (override/extend the shared config)
   specs:
-    - emphaticsoft@spack-dev %gcc@12 cxxstd=17 build_type=Debug
-    - $specs_larsoft
-    - $specs_nusofthep
-    - $specs_art
-    - $fife_specs
+  - emphaticsoft@spack-dev cxxstd=17 build_type=Debug
+  #- $specs_larsoft
+  #- $specs_nusofthep
+  #- $specs_art
+  #- $fife_specs
+  #- artdaq
   
-  # Environment-specific overrides
   packages:
+    all:
+      require: '%gcc@12'
+      # Allow building system packages that upstream configs mark as buildable:false
+      buildable: true
     emphaticsoft:
       variants: build_type=Debug  # Override for testing
-  
   concretizer:
     unify: true
     reuse: dependencies
-  
+
   view: false
