@@ -13,12 +13,7 @@ spack:
 
   # Environment-specific specs (override/extend the shared config)
   specs:
-  - emphaticsoft@spack-dev cxxstd=17 build_type=Debug
-  #- $specs_larsoft
-  #- $specs_nusofthep
-  #- $specs_art
-  #- $fife_specs
-  #- artdaq
+  - emphaticsoft@spack-dev cxxstd=17 build_type=Debug generator=ninja
   
   packages:
     all:
@@ -28,5 +23,3 @@ spack:
 
   # Inherit concretizer settings from emph-release.yaml
   # (No need to override here)
-
-  view: false

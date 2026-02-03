@@ -79,11 +79,11 @@ class Emphaticsoft(CMakePackage):
     # TODO: Re-enable when packages are available
     # depends_on("milliepede-ii")
     # depends_on("libtorch")
-    # depends_on("protobuf")
-    #depends_on("nlohmann-json")
+    depends_on("protobuf")
+    depends_on("nlohmann-json")
     
     # Python dependencies
-    #depends_on("python")
+    depends_on("python")
 
     # Build configuration
     def cmake_args(self):
