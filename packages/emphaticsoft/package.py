@@ -26,11 +26,18 @@ class Emphaticsoft(CMakePackage):
 
     variant(
         "cxxstd",
-        default="17",
-        values=("14", "17", "20"),
+        default="20",
+        values=("17", "20"),
         multi=False,
-        description="Use the specified C++ standard when building.",
+        description="Use the specified C++ standard when building (e26 default is C++20).",
     )
+
+    # Subsystem boundaries (map 1:1 onto EMPH_* CMake options on the spack-dev branch)
+    variant("daq", default=False, description="Enable DAQ/artdaq components")
+    variant("beamdb", default=True, description="Enable beam and conditions DB support")
+    variant("align", default=True, description="Enable Millepede-II alignment tooling")
+    variant("ml", default=False, description="Enable libtorch-based ML components")
+    variant("caen", default=False, description="Enable CAEN hardware support (build-only in UPS)")
 
     depends_on("c", type="build")
     depends_on("cxx", type="build")
@@ -52,10 +59,12 @@ class Emphaticsoft(CMakePackage):
     depends_on("fhicl-cpp")  # Package exists but has hyphen issues
     depends_on("messagefacility")
 
-    # DAQ dependencies
-    # TODO: Re-enable when packages are available
-    # depends_on("artdaq")
-    # depends_on("artdaq-core")
+    # artdaq-core carries the raw-data product definitions used by offline
+    # code (RawData); only the full artdaq stack is DAQ-gated.
+    depends_on("artdaq-core")
+    # DAQ stack (Qt chain blocked on AlmaLinux 9 — see vault note 28)
+    depends_on("artdaq", when="+daq")
+    depends_on("trace", when="+daq")
 
     # ROOT with specific components required by emphaticsoft
     # Components needed: 
@@ -70,15 +79,25 @@ class Emphaticsoft(CMakePackage):
     depends_on("geant4")
 
     # Data Handling & Database dependencies
-    # TODO: Re-enable when packages are created
-    #depends_on("ifdh_art")
-    #depends_on("ifbeam")
-    #depends_on("nucondb")
+    # Recipes confirmed in FNALssi/fnal_art (spack_repo layout), Jun 2026
+    depends_on("ifdh-art", when="+beamdb")
+    depends_on("ifbeam", when="+beamdb")
+    depends_on("nucondb", when="+beamdb")
+    # libwda is core: ChannelState and RunHistory link wda::wda
+    depends_on("libwda")
 
-    # Other dependencies
-    # TODO: Re-enable when packages are available
-    # depends_on("milliepede-ii")
-    # depends_on("libtorch")
+    # Alignment: spack builtin recipe is named "millepede" (it is Millepede-II).
+    # TODO: confirm with `spack list millepede` on the FNAL install and check it
+    # provides the CMake config that find_package(millepede_ii) expects.
+    depends_on("millepede", when="+align")
+
+    # TODO(+ml): no libtorch recipe found upstream (Jun 2026); spack convention
+    # is py-torch, which builds libtorch. Decide when the ML track is tackled.
+    # depends_on("py-torch", when="+ml")
+
+    # TODO(+caen): caencomm/caendigitizer/caenvme were UPS build-only products;
+    # no spack recipes known. Variant is a placeholder.
+
     depends_on("protobuf")
     depends_on("nlohmann-json")
     
@@ -90,6 +109,12 @@ class Emphaticsoft(CMakePackage):
         args = [
             self.define_from_variant("CMAKE_CXX_STANDARD", "cxxstd"),
             self.define_from_variant("CMAKE_BUILD_TYPE", "build_type"),
+            # EMPH_* options exist on the spack-dev branch (defaults OFF there)
+            self.define_from_variant("EMPH_BUILD_DAQ", "daq"),
+            self.define_from_variant("EMPH_BEAMDB", "beamdb"),
+            self.define_from_variant("EMPH_ALIGN", "align"),
+            self.define_from_variant("EMPH_BUILD_ML", "ml"),
+            self.define_from_variant("EMPH_CAEN", "caen"),
         ]
         return args
     
