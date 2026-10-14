@@ -26,10 +26,11 @@ class Emphaticsoft(CMakePackage):
 
     variant(
         "cxxstd",
-        default="20",
+        default="17",
         values=("17", "20"),
         multi=False,
-        description="Use the specified C++ standard when building (e26 default is C++20).",
+        description="Use the specified C++ standard when building. UPS e26 builds "
+        "emphaticsoft as C++17, and the v1.1.1 art suite and ROOT are C++17.",
     )
 
     # Subsystem boundaries (map 1:1 onto EMPH_* CMake options on the spack-dev branch)
