@@ -81,6 +81,10 @@ class Emphaticsoft(CMakePackage):
     depends_on("root+gdml+minuit+spectrum+tmva+x+xml+xrootd")
     # Simulation dependencies
     depends_on("geant4")
+    # The v1.1.1 geant4-data@11.0.0 does not pull in G4NDL, so G4NEUTRONHPDATA
+    # is unset and the HP physics in EMPHATIC's sim throws at the first event.
+    # UPS sets it through g4neutron v4_6.
+    depends_on("g4ndl@4.6", type="run")
 
     # Data Handling & Database dependencies
     # Recipes confirmed in FNALssi/fnal_art (spack_repo layout), Jun 2026
