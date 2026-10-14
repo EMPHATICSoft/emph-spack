@@ -61,7 +61,10 @@ class Emphaticsoft(CMakePackage):
 
     # artdaq-core carries the raw-data product definitions used by offline
     # code (RawData); only the full artdaq stack is DAQ-gated.
-    depends_on("artdaq-core")
+    # v3_10 is the series UPS pairs with art 3.14 (v3_10_02 in v06_02_00).
+    # ~bundle: +bundle pulls in an art-suite release instead of the art the
+    # parent environment already has.
+    depends_on("artdaq-core@v3_10: ~bundle")
     # DAQ stack (Qt chain blocked on AlmaLinux 9 — see vault note 28)
     depends_on("artdaq", when="+daq")
     depends_on("trace", when="+daq")
