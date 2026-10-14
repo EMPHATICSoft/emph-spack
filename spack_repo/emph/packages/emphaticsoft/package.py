@@ -12,7 +12,7 @@ class Emphaticsoft(CMakePackage):
     """EMPHATIC offline code repository."""
 
     homepage = "https://github.com/EMPHATICSoft/emphaticsoft"
-    git = "git@github.com:EMPHATICSoft/emphaticsoft.git"
+    git = "https://github.com/EMPHATICSoft/emphaticsoft.git"
 
     maintainers("gavinsdavies")
     license("Apache-2.0")
