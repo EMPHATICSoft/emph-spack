@@ -29,7 +29,7 @@ set -euo pipefail
 # default arguments
 SPACK_VERSION=fnal-v1.1.1
 ENV_NAME=emph-v1.1.1
-EMPH_SPACK_REPO=https://github.com/EMPHATICSoft/emph-spack.git
+EMPH_SPACK_REPO=${EMPH_SPACK_REPO:-https://github.com/EMPHATICSoft/emph-spack.git}
 JOBS=
 EMPH_GIT=
 WITHOUT=
