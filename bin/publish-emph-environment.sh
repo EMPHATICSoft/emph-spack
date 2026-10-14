@@ -75,6 +75,7 @@ trap 'rm -rf "$TMP"; spack mirror remove --scope site emph-release >/dev/null 2>
 fetch env/spack.lock "$TMP/spack.lock"
 fetch env/spack.yaml "$TMP/spack.yaml"
 fetch env/BUILD-INFO "$TMP/BUILD-INFO"
+fetch env/install-specs.txt "$TMP/install-specs.txt"
 
 # Move the instance's recipes to the commit the release was built with: binaries
 # come from the buildcache, but spack load still runs the recipes' setup code.
@@ -90,13 +91,16 @@ git -C "$REPO" checkout -q "$EMPH_SPACK_COMMIT"
 spack env create "$ENV_NAME" "$TMP/spack.lock"
 ENV_DIR=$(spack location --env "$ENV_NAME")
 spack mirror add --scope site --type binary emph-release "$BC_URL"
-spack -e "$ENV_NAME" install --cache-only --include-build-deps
+# Only what the build pushed: for a dependencies-only release (built --without
+# emphaticsoft) the emphaticsoft root stays in the environment, not installed.
+mapfile -t INSTALL_SPECS < <(awk '{print "/" $2}' "$TMP/install-specs.txt")
+spack -e "$ENV_NAME" install --cache-only --include-build-deps "${INSTALL_SPECS[@]}"
 
 # Keep the release definition next to the lock for reference. It is not the
 # environment's spack.yaml: that one is generated from the lock and has no git
 # includes to fetch on a read-only file system.
 cp "$TMP/spack.yaml" "$ENV_DIR/spack.yaml.release"
-cp "$TMP/BUILD-INFO" "$ENV_DIR/BUILD-INFO"
+cp "$TMP/BUILD-INFO" "$TMP/install-specs.txt" "$ENV_DIR/"
 echo "artifacts:  $ARTIFACTS" >> "$ENV_DIR/BUILD-INFO"
 touch "$ENV_DIR/.cvmfscatalog"
 

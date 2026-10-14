@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
-# Build the EMPHATIC Spack release environment and push it to a signed buildcache.
+# Build an EMPHATIC Spack environment and push it to a signed buildcache.
 #
 # Adapted from DUNE/dune-release-configs bin/build-dune-environment.sh. This is the
-# body of the Jenkins job emph-spack-build, and it runs the same way by hand on any
-# AlmaLinux 9 host (or the emphatic-el9-spack image).
+# body of the Jenkins job emph-spack-build (a freestyle job, like dune-spack-build):
+#
+#   wget -O build-emph-environment.sh \
+#     https://raw.githubusercontent.com/EMPHATICSoft/emph-spack/refs/heads/$EMPH_SPACK_REF/bin/build-emph-environment.sh
+#   bash ./build-emph-environment.sh -w "$WORKSPACE" -r "$EMPH_SPACK_REF" -e "$EMPH_ENV" \
+#     -s "$SPACK_VERSION" -k "$EMPH_GPG_KEY" ${WITHOUT:+--without "$WITHOUT"}
+#
+# with artifacts env/**, bc/**, timing.txt. It runs the same way by hand on any
+# AlmaLinux 9 host (or the emphatic-el9-spack image), from a checkout or standalone.
 #
 # Everything goes in the workspace:
+#   emph-spack/  recipes and environments at --emph-spack-ref (standalone runs only)
 #   spack/       throwaway fnal-vX instance, bootstrapped --with_padding
-#   env/         spack.yaml + spack.lock       (Jenkins artifacts)
-#   bc/          signed buildcache             (Jenkins artifact)
-#   timing.txt   seconds per step              (Jenkins artifact)
+#   env/         spack.yaml, spack.lock, BUILD-INFO, install-specs.txt   (artifacts)
+#   bc/          signed buildcache                                       (artifact)
+#   timing.txt   seconds per step                                        (artifact)
 #
-# The recipes and the release environment come from the emph-spack checkout this
-# script lives in, so the build matches whatever commit Jenkins checked out.
+# --without emphaticsoft builds the dependencies-only release: the environment is
+# concretized with emphaticsoft, so every dependency has the version and variants
+# emphaticsoft needs, but emphaticsoft itself is not built, pushed or published.
 #
 # Publishing on CVMFS is a separate step: bin/publish-emph-environment.sh.
 set -euo pipefail
@@ -20,28 +29,35 @@ set -euo pipefail
 # default arguments
 SPACK_VERSION=fnal-v1.1.1
 ENV_NAME=emph-v1.1.1
-EMPH_SPACK_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+EMPH_SPACK_REPO=https://github.com/EMPHATICSoft/emph-spack.git
 JOBS=
 EMPH_GIT=
+WITHOUT=
 
 USAGE="Usage: $0 -w|--workspace <path> [-k|--gpg-key <secret key file>]
-          [-s|--spack-version <fnal-vX>] [-e|--env <environment dir name>]
-          [-j|--jobs <n>] [--emphaticsoft-git <url>]
+          [-r|--emph-spack-ref <branch, tag or commit>] [-e|--env <environments/ dir>]
+          [-s|--spack-version <fnal-vX>] [--without <package>] [-j|--jobs <n>]
+          [--emphaticsoft-git <url>]
 
   --gpg-key           exported private key to sign with (Jenkins credential file).
                       Without it the build runs but nothing is pushed.
+  --emph-spack-ref    clone emph-spack at this ref into the workspace. Default: use
+                      the checkout this script is in, or main if run standalone.
+  --without           concretize with this root but do not build it (repeatable).
   --emphaticsoft-git  fetch emphaticsoft from this URL instead of the recipe's,
                       e.g. file:///path/to/clone to build unpushed commits."
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -w|--workspace)     WORKSPACE=$2; shift 2 ;;
-    -s|--spack-version) SPACK_VERSION=$2; shift 2 ;;
-    -k|--gpg-key)       GPG_KEY=$2; shift 2 ;;
-    -e|--env)           ENV_NAME=$2; shift 2 ;;
-    -j|--jobs)          JOBS=$2; shift 2 ;;
-    --emphaticsoft-git) EMPH_GIT=$2; shift 2 ;;
-    -h|--help)          echo "$USAGE"; exit 0 ;;
-    *)                  echo "Unknown option: $1"; echo "$USAGE"; exit 1 ;;
+    -w|--workspace)      WORKSPACE=$2; shift 2 ;;
+    -s|--spack-version)  SPACK_VERSION=$2; shift 2 ;;
+    -k|--gpg-key)        GPG_KEY=$2; shift 2 ;;
+    -r|--emph-spack-ref) EMPH_SPACK_REF=$2; shift 2 ;;
+    -e|--env)            ENV_NAME=$2; shift 2 ;;
+    -j|--jobs)           JOBS=$2; shift 2 ;;
+    --without)           WITHOUT="$WITHOUT $2"; shift 2 ;;
+    --emphaticsoft-git)  EMPH_GIT=$2; shift 2 ;;
+    -h|--help)           echo "$USAGE"; exit 0 ;;
+    *)                   echo "Unknown option: $1"; echo "$USAGE"; exit 1 ;;
   esac
 done
 
@@ -49,6 +65,20 @@ if [[ ! -v WORKSPACE ]]; then
   echo "Error: workspace directory not specified!"
   echo "$USAGE"
   exit 1
+fi
+mkdir -p "$WORKSPACE"
+WORKSPACE=$(realpath "$WORKSPACE")
+
+# Recipes: the checkout this script is in, unless a ref is asked for or the script
+# was fetched on its own (the Jenkins job wgets it, as DUNE's does).
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+if [[ ! -v EMPH_SPACK_REF && -d $HERE/spack_repo/emph ]]; then
+  EMPH_SPACK_DIR=$HERE
+else
+  EMPH_SPACK_DIR=$WORKSPACE/emph-spack
+  rm -rf "$EMPH_SPACK_DIR"
+  git clone -q "$EMPH_SPACK_REPO" "$EMPH_SPACK_DIR"
+  git -C "$EMPH_SPACK_DIR" checkout -q "${EMPH_SPACK_REF:-main}"
 fi
 if [[ ! -f $EMPH_SPACK_DIR/environments/$ENV_NAME/spack.yaml ]]; then
   echo "Error: no environments/$ENV_NAME/spack.yaml in $EMPH_SPACK_DIR"
@@ -59,8 +89,13 @@ SPACK_ROOT=$WORKSPACE/spack
 SPACK_ENV_DIR=$WORKSPACE/env
 BUILDCACHE=$WORKSPACE/bc
 TIMING=$WORKSPACE/timing.txt
+# Spack clones git includes (art-release-configs, fife-release-configs) into
+# $TMPDIR/$USER/includes and reuses them across runs even after the branch moves.
+# DUNE's Jenkins job deletes /tmp/*/included_yaml for this reason; keeping TMPDIR in
+# a workspace that starts empty does the same.
 export TMPDIR=$WORKSPACE/tmp
-mkdir -p "$WORKSPACE" "$TMPDIR"
+rm -rf "$SPACK_ROOT" "$SPACK_ENV_DIR" "$BUILDCACHE" "$TMPDIR" "$TIMING"
+mkdir -p "$TMPDIR"
 cd "$WORKSPACE"
 
 # step <name> <command...>: run a step and record how long it took
@@ -95,32 +130,40 @@ configure() {
   {
     echo "emph-spack: $(git -C "$EMPH_SPACK_DIR" rev-parse HEAD)$(git -C "$EMPH_SPACK_DIR" diff --quiet || echo ' (dirty)')"
     echo "spack:      $SPACK_VERSION $(git -C "$SPACK_ROOT" rev-parse HEAD)"
+    echo "env:        environments/$ENV_NAME${WITHOUT:+, without$WITHOUT}"
     echo "host:       $(hostname) $(. /etc/os-release && echo "$PRETTY_NAME")"
     echo "date:       $(date -u '+%F %T UTC')"
   } > "$SPACK_ENV_DIR/BUILD-INFO"
 }
 
+concretize() {
+  spack -e "$SPACK_ENV_DIR" --disable-locks concretize
+  spack -e "$SPACK_ENV_DIR" find -c > "$SPACK_ENV_DIR/concretized.txt" || true
+  # What to install, push and publish, as "<name> <hash>" lines.
+  WITHOUT=$WITHOUT spack -e "$SPACK_ENV_DIR" python "$EMPH_SPACK_DIR/bin/select-install-specs.py" \
+    > "$SPACK_ENV_DIR/install-specs.txt"
+  mapfile -t INSTALL_SPECS < <(awk '{print "/" $2}' "$SPACK_ENV_DIR/install-specs.txt")
+}
+
 install() {
-  spack -e "$SPACK_ENV_DIR" install --fail-fast ${JOBS:+-j "$JOBS"}
+  spack -e "$SPACK_ENV_DIR" install --fail-fast ${JOBS:+-j "$JOBS"} "${INSTALL_SPECS[@]}"
 }
 
 push() {
   spack gpg trust "$GPG_KEY"
   spack -e "$SPACK_ENV_DIR" buildcache push --signed --with-build-dependencies --private \
-    ${JOBS:+-j "$JOBS"} "$BUILDCACHE"
+    ${JOBS:+-j "$JOBS"} "$BUILDCACHE" "${INSTALL_SPECS[@]}"
   spack gpg publish -d "$BUILDCACHE" --update-index
   spack buildcache update-index "$BUILDCACHE"
   # gpg-agent outlives the build otherwise and keeps the Jenkins step (or container) open
   GNUPGHOME=$SPACK_ROOT/opt/spack/gpg gpgconf --kill gpg-agent || true
 }
 
-: > "$TIMING"
 step bootstrap bootstrap
 # shellcheck disable=SC1091
 source "$SPACK_ROOT/setup-env.sh"
 step configure configure
-step concretize spack -e "$SPACK_ENV_DIR" --disable-locks concretize
-spack -e "$SPACK_ENV_DIR" find -c > "$SPACK_ENV_DIR/concretized.txt" || true
+step concretize concretize
 step install install
 
 if [[ ! -v GPG_KEY ]]; then
