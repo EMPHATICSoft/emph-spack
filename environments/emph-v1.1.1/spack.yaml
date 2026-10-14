@@ -1,0 +1,30 @@
+# Draft EMPHATIC release environment for a self-contained fnal-v1.1.1 base.
+# Same shape as novaexperiment/nova-release-configs nova-release.yaml, minus the
+# LArSoft upstream: everything is reused from the scisoft binary caches or built.
+spack:
+  include:
+  - git: https://github.com/art-framework-suite/art-release-configs
+    tag: art-3.14.04
+    paths:
+    - included_yaml/gcc-12-toolchain.yaml
+    - included_yaml/packages-art.yaml
+    - included_yaml/specs-art.yaml
+  - git: https://github.com/fnal-fife/fife-release-configs
+    branch: main
+    paths:
+    - included_yaml/fife_packages.yaml
+  specs:
+  - $specs_art
+  - emphaticsoft@spack-dev ~daq +beamdb ~align ~ml
+  - artdaq-core@v3_10_02 ~bundle cxxstd=17
+  view: false
+  concretizer:
+    unify: true
+  packages:
+    all:
+      variants:
+      - generator=ninja
+      - build_type=Release
+      - cxxstd=17
+      target:
+      - x86_64_v3
