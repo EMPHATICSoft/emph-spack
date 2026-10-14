@@ -43,6 +43,10 @@ if [[ ! -v ENV_NAME ]]; then
   echo "$USAGE"
   exit 1
 fi
+if [[ ! $ENV_NAME =~ ^[A-Za-z0-9_][A-Za-z0-9_-]*$ ]]; then
+  echo "Error: Spack environment names may only use letters, digits, _ and - (no dots)"
+  exit 1
+fi
 if [[ ! -v ARTIFACTS ]]; then
   if (( BUILD_INDEX < 1 )); then
     echo "Error: give a Jenkins build index (-i) or an artifact location (-a)"
