@@ -32,7 +32,10 @@ ENV_NAME=emph-v1.1.1
 EMPH_SPACK_REPO=${EMPH_SPACK_REPO:-https://github.com/EMPHATICSoft/emph-spack.git}
 JOBS=
 EMPH_GIT=
-WITHOUT=
+# Jenkins exports job parameters as environment variables, so a WITHOUT parameter
+# counts even if the shell step does not pass --without. Resetting it here used to
+# drop it silently and build emphaticsoft anyway (emph-spack-build #4).
+WITHOUT=${WITHOUT:-}
 
 USAGE="Usage: $0 -w|--workspace <path> [-k|--gpg-key <secret key file>]
           [-r|--emph-spack-ref <branch, tag or commit>] [-e|--env <environments/ dir>]
@@ -60,6 +63,10 @@ while [[ $# -gt 0 ]]; do
     *)                   echo "Unknown option: $1"; echo "$USAGE"; exit 1 ;;
   esac
 done
+
+# --without may repeat a package that $WITHOUT already names
+WITHOUT=$(printf '%s\n' $WITHOUT | sort -u | paste -sd' ')
+echo "Building environments/$ENV_NAME with $SPACK_VERSION${WITHOUT:+, without $WITHOUT}"
 
 if [[ ! -v WORKSPACE ]]; then
   echo "Error: workspace directory not specified!"
@@ -130,7 +137,7 @@ configure() {
   {
     echo "emph-spack: $(git -C "$EMPH_SPACK_DIR" rev-parse HEAD)$(git -C "$EMPH_SPACK_DIR" diff --quiet || echo ' (dirty)')"
     echo "spack:      $SPACK_VERSION $(git -C "$SPACK_ROOT" rev-parse HEAD)"
-    echo "env:        environments/$ENV_NAME${WITHOUT:+, without$WITHOUT}"
+    echo "env:        environments/$ENV_NAME${WITHOUT:+, without $WITHOUT}"
     echo "host:       $(hostname) $(. /etc/os-release && echo "$PRETTY_NAME")"
     echo "date:       $(date -u '+%F %T UTC')"
   } > "$SPACK_ENV_DIR/BUILD-INFO"
