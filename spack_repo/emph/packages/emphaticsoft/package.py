@@ -140,6 +140,8 @@ class Emphaticsoft(CMakePackage):
         env.prepend_path("ROOT_INCLUDE_PATH", prefix.include)
         # Ensure we can find fhicl files
         env.prepend_path("FHICL_FILE_PATH", "{0}/fcl".format(prefix))
-        # Ensure we can find GDML files
-        env.prepend_path("FW_SEARCH_PATH", "{0}/gdml".format(prefix))
+        # Modules open their runtime data (ConstBase, calibrations, ...) through
+        # $CETPKG_SOURCE, which only mrb sets. The package installs that data under
+        # <prefix>/source with the source-tree layout.
+        env.set("CETPKG_SOURCE", join_path(prefix, "source"))
         
