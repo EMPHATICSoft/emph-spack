@@ -94,10 +94,10 @@ class Emphaticsoft(CMakePackage):
     # libwda is core: ChannelState and RunHistory link wda::wda
     depends_on("libwda")
 
-    # Alignment: spack builtin recipe is named "millepede" (it is Millepede-II).
-    # TODO: confirm with `spack list millepede` on the FNAL install and check it
-    # provides the CMake config that find_package(millepede_ii) expects.
-    depends_on("millepede", when="+align")
+    # Alignment: Millepede-II. The emph repo's millepede extends the builtin recipe
+    # with Mille.h and libmille.a, which Modules/Findmillepede_ii.cmake looks for.
+    # 04-17-05 is the version of the UPS millepede_ii product.
+    depends_on("millepede@04-17-05:", when="+align")
 
     # TODO(+ml): no libtorch recipe found upstream (Jun 2026); spack convention
     # is py-torch, which builds libtorch. Decide when the ML track is tackled.

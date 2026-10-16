@@ -15,7 +15,7 @@ spack:
     - included_yaml/fife_packages.yaml
   specs:
   - $specs_art
-  - emphaticsoft@spack-dev ~daq +beamdb ~align ~ml
+  - emphaticsoft@spack-dev ~daq +beamdb +align ~ml
   - artdaq-core@v3_10_02 ~bundle cxxstd=17
   view: false
   concretizer:
