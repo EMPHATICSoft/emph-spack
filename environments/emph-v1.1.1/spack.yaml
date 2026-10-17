@@ -17,8 +17,10 @@ spack:
     - included_yaml/fife_packages.yaml
   specs:
   - $specs_art
-  - emphaticsoft@spack-dev ~daq +beamdb +align +ml
-  - artdaq-core@v3_10_02 ~bundle cxxstd=17
+  # %build_compiler (gcc-12-toolchain.yaml), as $specs_art has: LArSoft's upstream
+  # install tree has llvm 18, which the solver may otherwise pick as the compiler.
+  - emphaticsoft@spack-dev ~daq +beamdb +align +ml %build_compiler
+  - artdaq-core@v3_10_02 ~bundle cxxstd=17 %build_compiler
   view: false
   concretizer:
     unify: true
