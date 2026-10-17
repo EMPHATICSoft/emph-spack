@@ -5,8 +5,8 @@
 # CVMFS publisher inside an open transaction:
 #
 #   cvmfs_server transaction emphatic.opensciencegrid.org
-#   bin/publish-emph-environment.sh -i 12 -e emph-deps-v07_04_00 -l emph-deps-env
-#   cvmfs_server publish -m "emph-deps-v07_04_00 (emph-spack-build #12)" emphatic.opensciencegrid.org
+#   bin/publish-emph-environment.sh -i 12 -e emph-deps-v08_00_00 -l emph-deps-env
+#   cvmfs_server publish -m "emph-deps-v08_00_00 (emph-spack-build #12)" emphatic.opensciencegrid.org
 #
 # On failure: cvmfs_server abort -f emphatic.opensciencegrid.org
 #
