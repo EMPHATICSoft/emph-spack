@@ -23,6 +23,12 @@
 # concretized with emphaticsoft, so every dependency has the version and variants
 # emphaticsoft needs, but emphaticsoft itself is not built, pushed or published.
 #
+# --upstream adds an existing install tree (on CVMFS) as a Spack upstream. Specs
+# installed there are reused, not pushed, and the publish script adds the same
+# upstream to the CVMFS instance. An environment can list its upstreams, one per
+# line, in environments/<env>/upstreams.txt: the release environment uses LArSoft's
+# spack-fnal-v1.1.1 tree for py-torch and CUDA (+ml), about 7 GB we do not copy.
+#
 # Publishing on CVMFS is a separate step: bin/publish-emph-environment.sh.
 set -euo pipefail
 
@@ -36,17 +42,20 @@ EMPH_GIT=
 # counts even if the shell step does not pass --without. Resetting it here used to
 # drop it silently and build emphaticsoft anyway (emph-spack-build #4).
 WITHOUT=${WITHOUT:-}
+UPSTREAMS=${UPSTREAMS:-}
 
 USAGE="Usage: $0 -w|--workspace <path> [-k|--gpg-key <secret key file>]
           [-r|--emph-spack-ref <branch, tag or commit>] [-e|--env <environments/ dir>]
           [-s|--spack-version <fnal-vX>] [--without <package>] [-j|--jobs <n>]
-          [--emphaticsoft-git <url>]
+          [-u|--upstream <install tree>] [--emphaticsoft-git <url>]
 
   --gpg-key           exported private key to sign with (Jenkins credential file).
                       Without it the build runs but nothing is pushed.
   --emph-spack-ref    clone emph-spack at this ref into the workspace. Default: use
                       the checkout this script is in, or main if run standalone.
   --without           concretize with this root but do not build it (repeatable).
+  --upstream          reuse this install tree as a Spack upstream (repeatable);
+                      what is installed there is not built or pushed.
   --emphaticsoft-git  fetch emphaticsoft from this URL instead of the recipe's,
                       e.g. file:///path/to/clone to build unpushed commits."
 while [[ $# -gt 0 ]]; do
@@ -58,6 +67,7 @@ while [[ $# -gt 0 ]]; do
     -e|--env)            ENV_NAME=$2; shift 2 ;;
     -j|--jobs)           JOBS=$2; shift 2 ;;
     --without)           WITHOUT="$WITHOUT $2"; shift 2 ;;
+    -u|--upstream)       UPSTREAMS="$UPSTREAMS $2"; shift 2 ;;
     --emphaticsoft-git)  EMPH_GIT=$2; shift 2 ;;
     -h|--help)           echo "$USAGE"; exit 0 ;;
     *)                   echo "Unknown option: $1"; echo "$USAGE"; exit 1 ;;
@@ -91,6 +101,17 @@ if [[ ! -f $EMPH_SPACK_DIR/environments/$ENV_NAME/spack.yaml ]]; then
   echo "Error: no environments/$ENV_NAME/spack.yaml in $EMPH_SPACK_DIR"
   exit 1
 fi
+if [[ -f $EMPH_SPACK_DIR/environments/$ENV_NAME/upstreams.txt ]]; then
+  UPSTREAMS="$UPSTREAMS $(grep -v '^ *#' "$EMPH_SPACK_DIR/environments/$ENV_NAME/upstreams.txt" || true)"
+fi
+UPSTREAMS=$(printf '%s\n' $UPSTREAMS | sort -u | paste -sd' ')
+for u in $UPSTREAMS; do
+  echo "Upstream: $u"
+  if [[ ! -f $u/.spack-db/index.json ]]; then
+    echo "Error: upstream $u has no Spack database (is CVMFS mounted?)"
+    exit 1
+  fi
+done
 
 SPACK_ROOT=$WORKSPACE/spack
 SPACK_ENV_DIR=$WORKSPACE/env
@@ -124,6 +145,14 @@ configure() {
   spack mirror add --scope site --type source scisoft_mirror_source \
     https://scisoft.fnal.gov/scisoft/spack-mirror/spack-packages/sources
   spack repo add --scope site "$EMPH_SPACK_DIR/spack_repo/emph"
+  if [[ -n $UPSTREAMS ]]; then
+    {
+      echo "upstreams:"
+      for u in $UPSTREAMS; do
+        printf '  %s:\n    install_tree: %s\n' "$(echo "$u" | tr -c 'A-Za-z0-9\n' _)" "$u"
+      done
+    } > "$SPACK_ROOT/etc/spack/upstreams.yaml"
+  fi
 
   mkdir -p "$SPACK_ENV_DIR"
   cp "$EMPH_SPACK_DIR/environments/$ENV_NAME/spack.yaml" "$SPACK_ENV_DIR/spack.yaml"
@@ -138,6 +167,7 @@ configure() {
     echo "emph-spack: $(git -C "$EMPH_SPACK_DIR" rev-parse HEAD)$(git -C "$EMPH_SPACK_DIR" diff --quiet || echo ' (dirty)')"
     echo "spack:      $SPACK_VERSION $(git -C "$SPACK_ROOT" rev-parse HEAD)"
     echo "env:        environments/$ENV_NAME${WITHOUT:+, without $WITHOUT}"
+    echo "upstreams:  ${UPSTREAMS:-none}"
     echo "host:       $(hostname) $(. /etc/os-release && echo "$PRETTY_NAME")"
     echo "date:       $(date -u '+%F %T UTC')"
   } > "$SPACK_ENV_DIR/BUILD-INFO"
@@ -152,14 +182,23 @@ concretize() {
   mapfile -t INSTALL_SPECS < <(awk '{print "/" $2}' "$SPACK_ENV_DIR/install-specs.txt")
 }
 
+# The specs to push: the install specs and all their dependencies, as
+# --with-build-dependencies would give, minus externals and what the upstreams have.
+push_specs() {
+  spack -e "$SPACK_ENV_DIR" python "$EMPH_SPACK_DIR/bin/select-push-specs.py" \
+    "$SPACK_ENV_DIR/install-specs.txt"
+}
+
 install() {
   spack -e "$SPACK_ENV_DIR" install --fail-fast ${JOBS:+-j "$JOBS"} "${INSTALL_SPECS[@]}"
 }
 
 push() {
   spack gpg trust "$GPG_KEY"
-  spack -e "$SPACK_ENV_DIR" buildcache push --signed --with-build-dependencies --private \
-    ${JOBS:+-j "$JOBS"} "$BUILDCACHE" "${INSTALL_SPECS[@]}"
+  mapfile -t PUSH_SPECS < <(push_specs)
+  echo "Pushing ${#PUSH_SPECS[@]} specs"
+  spack -e "$SPACK_ENV_DIR" buildcache push --signed --only package --private \
+    ${JOBS:+-j "$JOBS"} "$BUILDCACHE" "${PUSH_SPECS[@]}"
   spack gpg publish -d "$BUILDCACHE" --update-index
   spack buildcache update-index "$BUILDCACHE"
   # gpg-agent outlives the build otherwise and keeps the Jenkins step (or container) open

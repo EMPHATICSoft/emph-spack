@@ -1,6 +1,8 @@
-# Draft EMPHATIC release environment for a self-contained fnal-v1.1.1 base.
-# Same shape as novaexperiment/nova-release-configs nova-release.yaml, minus the
-# LArSoft upstream: everything is reused from the scisoft binary caches or built.
+# EMPHATIC release environment for the fnal-v1.1.1 base on
+# /cvmfs/emphatic.opensciencegrid.org/spack/v1.1.1. Same shape as
+# novaexperiment/nova-release-configs nova-release.yaml. Everything is reused from
+# the scisoft binary caches or built, except py-torch and its CUDA (+ml), which come
+# from LArSoft's install tree, an upstream listed in upstreams.txt.
 spack:
   include:
   - git: https://github.com/art-framework-suite/art-release-configs
@@ -15,8 +17,10 @@ spack:
     - included_yaml/fife_packages.yaml
   specs:
   - $specs_art
-  - emphaticsoft@spack-dev ~daq +beamdb ~align ~ml
-  - artdaq-core@v3_10_02 ~bundle cxxstd=17
+  # %build_compiler (gcc-12-toolchain.yaml), as $specs_art has: LArSoft's upstream
+  # install tree has llvm 18, which the solver may otherwise pick as the compiler.
+  - emphaticsoft@spack-dev ~daq +beamdb +align +ml %build_compiler
+  - artdaq-core@v3_10_02 ~bundle cxxstd=17 %build_compiler
   view: false
   concretizer:
     unify: true
@@ -28,3 +32,14 @@ spack:
       - cxxstd=17
       target:
       - x86_64_v3
+    # +ml: the py-torch build installed in /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.1
+    # (and in the scisoft cache), so it and its CUDA come from LArSoft's install tree, an
+    # upstream of the EMPHATIC instance, instead of being copied to our repository.
+    py-torch:
+      require: "@2.10.0 +cuda cuda_arch=80 ~mkldnn"
+    # libomp for that py-torch (see the emphaticsoft recipe). Its default compiler is
+    # clang, which would pull in LArSoft's llvm and a second python. Keep +multicompat:
+    # the install always has a libgomp.so.1 alias, which LD_LIBRARY_PATH puts in front
+    # of gcc's libgomp, so it must implement the GNU OpenMP interface.
+    llvm-openmp:
+      require: "%gcc"
