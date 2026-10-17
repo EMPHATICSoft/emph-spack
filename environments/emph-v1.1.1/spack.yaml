@@ -15,7 +15,7 @@ spack:
     - included_yaml/fife_packages.yaml
   specs:
   - $specs_art
-  - emphaticsoft@spack-dev ~daq +beamdb +align ~ml
+  - emphaticsoft@spack-dev ~daq +beamdb +align +ml
   - artdaq-core@v3_10_02 ~bundle cxxstd=17
   view: false
   concretizer:
@@ -28,3 +28,8 @@ spack:
       - cxxstd=17
       target:
       - x86_64_v3
+    # +ml: the py-torch build installed in /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.1
+    # (and in the scisoft cache), so it and its CUDA come from LArSoft's install tree, an
+    # upstream of the EMPHATIC instance, instead of being copied to our repository.
+    py-torch:
+      require: "@2.10.0 +cuda cuda_arch=80 ~mkldnn"

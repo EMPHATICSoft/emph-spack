@@ -66,9 +66,13 @@ class Emphaticsoft(CMakePackage):
     # ~bundle: +bundle pulls in an art-suite release instead of the art the
     # parent environment already has.
     depends_on("artdaq-core@v3_10: ~bundle")
-    # DAQ stack (Qt chain blocked on AlmaLinux 9 — see vault note 28)
+    # TRACE: RawDataMerger. The raw data unpackers, RawDataMerger and WebDisplay
+    # need only artdaq-core and TRACE and are always built.
+    depends_on("trace")
+    # +daq: the full artdaq stack, for the online components
+    # (emphatic-artdaq/ArtModules, not built at present). artdaq pulls in
+    # artdaq-mfextensions and with it qt@5.15+gui. Not needed offline.
     depends_on("artdaq", when="+daq")
-    depends_on("trace", when="+daq")
 
     # ROOT with specific components required by emphaticsoft
     # Components needed: 
@@ -99,9 +103,10 @@ class Emphaticsoft(CMakePackage):
     # 04-17-05 is the version of the UPS millepede_ii product.
     depends_on("millepede@04-17-05:", when="+align")
 
-    # TODO(+ml): no libtorch recipe found upstream (Jun 2026); spack convention
-    # is py-torch, which builds libtorch. Decide when the ML track is tackled.
-    # depends_on("py-torch", when="+ml")
+    # ML (TorchML, ARICHReco): libtorch from py-torch, as LArSoft's larrecodnn
+    # does. py-torch puts torch/share/cmake on CMAKE_PREFIX_PATH, which is where
+    # Modules/Findlibtorch.cmake looks for TorchConfig.cmake. UPS used libtorch 2.1.1.
+    depends_on("py-torch", when="+ml")
 
     # TODO(+caen): caencomm/caendigitizer/caenvme were UPS build-only products;
     # no spack recipes known. Variant is a placeholder.
