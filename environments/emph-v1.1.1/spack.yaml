@@ -1,6 +1,9 @@
-# Draft EMPHATIC release environment for a self-contained fnal-v1.1.1 base.
-# Same shape as novaexperiment/nova-release-configs nova-release.yaml, minus the
-# LArSoft upstream: everything is reused from the scisoft binary caches or built.
+# EMPHATIC release environment for the fnal-v1.1.1 base on
+# /cvmfs/emphatic.opensciencegrid.org/spack/v1.1.1. Same shape as
+# novaexperiment/nova-release-configs nova-release.yaml. Everything is reused from
+# the scisoft binary caches or built, except py-torch and its CUDA (+ml), which come
+# from LArSoft's install tree: build with
+#   --upstream /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.1/opt/spack
 spack:
   include:
   - git: https://github.com/art-framework-suite/art-release-configs

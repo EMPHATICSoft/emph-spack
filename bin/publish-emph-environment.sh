@@ -5,14 +5,18 @@
 # CVMFS publisher inside an open transaction:
 #
 #   cvmfs_server transaction emphatic.opensciencegrid.org
-#   bin/publish-emph-environment.sh -i 12 -e emphaticsoft-v06_03_00
-#   cvmfs_server publish -m "emphaticsoft-v06_03_00 (emph-spack-build #12)" emphatic.opensciencegrid.org
+#   bin/publish-emph-environment.sh -i 12 -e emph-deps-v07_04_00
+#   cvmfs_server publish -m "emph-deps-v07_04_00 (emph-spack-build #12)" emphatic.opensciencegrid.org
 #
 # On failure: cvmfs_server abort -f emphatic.opensciencegrid.org
 #
 # Packages come only from the build's signed buildcache (--cache-only), so nothing
 # is compiled on the publisher, and the buildcache must be signed with a key the
 # instance trusts (bin/create-emph-instance.sh).
+#
+# If the build used upstreams (build-emph-environment.sh --upstream), they are added
+# to the instance's etc/spack/upstreams.yaml, and the specs installed there are not
+# copied. `spack subspack` copies that file, so developer areas see them too.
 set -euo pipefail
 
 # default arguments
@@ -69,7 +73,8 @@ esac
 
 # shellcheck disable=SC1091
 source "$SPACK_INSTANCE/setup-env.sh"
-if [[ -e $SPACK_INSTANCE/var/spack/environments/$ENV_NAME ]]; then
+ENVS=$SPACK_INSTANCE/var/spack/environments
+if [[ -e $ENVS/$ENV_NAME ]]; then
   echo "Error: environment $ENV_NAME already exists in $SPACK_INSTANCE"
   exit 1
 fi
@@ -91,6 +96,21 @@ fi
 REPO=$SPACK_INSTANCE/var/spack/repos/emph-spack
 git -C "$REPO" fetch -q origin
 git -C "$REPO" checkout -q "$EMPH_SPACK_COMMIT"
+
+# Upstreams the build reused from: add any the instance lacks, before Spack reads
+# its configuration for the install.
+UPSTREAMS_FILE=$SPACK_INSTANCE/etc/spack/upstreams.yaml
+for u in $(awk '/^upstreams:/ {for (i = 2; i <= NF; i++) if ($i != "none") print $i}' "$TMP/BUILD-INFO"); do
+  if [[ ! -f $u/.spack-db/index.json ]]; then
+    echo "Error: upstream $u has no Spack database (is CVMFS mounted?)"
+    exit 1
+  fi
+  if ! grep -qs "install_tree: $u\$" "$UPSTREAMS_FILE"; then
+    [[ -s $UPSTREAMS_FILE ]] || echo "upstreams:" > "$UPSTREAMS_FILE"
+    printf '  %s:\n    install_tree: %s\n' "$(echo "$u" | tr -c 'A-Za-z0-9\n' _)" "$u" >> "$UPSTREAMS_FILE"
+    echo "Added upstream $u to $UPSTREAMS_FILE"
+  fi
+done
 
 spack env create "$ENV_NAME" "$TMP/spack.lock"
 ENV_DIR=$(spack location --env "$ENV_NAME")
