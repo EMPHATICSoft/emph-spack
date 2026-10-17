@@ -35,3 +35,9 @@ spack:
     # upstream of the EMPHATIC instance, instead of being copied to our repository.
     py-torch:
       require: "@2.10.0 +cuda cuda_arch=80 ~mkldnn"
+    # libomp for that py-torch (see the emphaticsoft recipe). Its default compiler is
+    # clang, which would pull in LArSoft's llvm and a second python. Keep +multicompat:
+    # the install always has a libgomp.so.1 alias, which LD_LIBRARY_PATH puts in front
+    # of gcc's libgomp, so it must implement the GNU OpenMP interface.
+    llvm-openmp:
+      require: "%gcc"

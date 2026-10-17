@@ -107,6 +107,10 @@ class Emphaticsoft(CMakePackage):
     # does. py-torch puts torch/share/cmake on CMAKE_PREFIX_PATH, which is where
     # Modules/Findlibtorch.cmake looks for TorchConfig.cmake. UPS used libtorch 2.1.1.
     depends_on("py-torch", when="+ml")
+    # That py-torch (LArSoft's build) links libtorch_cpu against the build host's
+    # /lib64/libomp.so with no RPATH to it. AlmaLinux 9 GPVMs have no libomp RPM,
+    # so provide LLVM's OpenMP runtime and put it on LD_LIBRARY_PATH.
+    depends_on("llvm-openmp", type="run", when="+ml")
 
     # TODO(+caen): caencomm/caendigitizer/caenvme were UPS build-only products;
     # no spack recipes known. Variant is a placeholder.
@@ -149,4 +153,6 @@ class Emphaticsoft(CMakePackage):
         # $CETPKG_SOURCE, which only mrb sets. The package installs that data under
         # <prefix>/source with the source-tree layout.
         env.set("CETPKG_SOURCE", join_path(prefix, "source"))
+        if self.spec.satisfies("+ml"):
+            env.prepend_path("LD_LIBRARY_PATH", self.spec["llvm-openmp"].prefix.lib)
         
