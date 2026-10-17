@@ -2,8 +2,7 @@
 # /cvmfs/emphatic.opensciencegrid.org/spack/v1.1.1. Same shape as
 # novaexperiment/nova-release-configs nova-release.yaml. Everything is reused from
 # the scisoft binary caches or built, except py-torch and its CUDA (+ml), which come
-# from LArSoft's install tree: build with
-#   --upstream /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.1/opt/spack
+# from LArSoft's install tree, an upstream listed in upstreams.txt.
 spack:
   include:
   - git: https://github.com/art-framework-suite/art-release-configs

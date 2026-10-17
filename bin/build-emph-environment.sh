@@ -7,8 +7,7 @@
 #   wget -O build-emph-environment.sh \
 #     https://raw.githubusercontent.com/EMPHATICSoft/emph-spack/refs/heads/$EMPH_SPACK_REF/bin/build-emph-environment.sh
 #   bash ./build-emph-environment.sh -w "$WORKSPACE" -r "$EMPH_SPACK_REF" -e "$EMPH_ENV" \
-#     -s "$SPACK_VERSION" -k "$EMPH_GPG_KEY" ${WITHOUT:+--without "$WITHOUT"} \
-#     -u /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.1/opt/spack
+#     -s "$SPACK_VERSION" -k "$EMPH_GPG_KEY" ${WITHOUT:+--without "$WITHOUT"}
 #
 # with artifacts env/**, bc/**, timing.txt. It runs the same way by hand on any
 # AlmaLinux 9 host (or the emphatic-el9-spack image), from a checkout or standalone.
@@ -26,7 +25,8 @@
 #
 # --upstream adds an existing install tree (on CVMFS) as a Spack upstream. Specs
 # installed there are reused, not pushed, and the publish script adds the same
-# upstream to the CVMFS instance. The release environment uses LArSoft's
+# upstream to the CVMFS instance. An environment can list its upstreams, one per
+# line, in environments/<env>/upstreams.txt: the release environment uses LArSoft's
 # spack-fnal-v1.1.1 tree for py-torch and CUDA (+ml), about 7 GB we do not copy.
 #
 # Publishing on CVMFS is a separate step: bin/publish-emph-environment.sh.
@@ -76,14 +76,7 @@ done
 
 # --without may repeat a package that $WITHOUT already names
 WITHOUT=$(printf '%s\n' $WITHOUT | sort -u | paste -sd' ')
-UPSTREAMS=$(printf '%s\n' $UPSTREAMS | sort -u | paste -sd' ')
-echo "Building environments/$ENV_NAME with $SPACK_VERSION${WITHOUT:+, without $WITHOUT}${UPSTREAMS:+, upstreams $UPSTREAMS}"
-for u in $UPSTREAMS; do
-  if [[ ! -f $u/.spack-db/index.json ]]; then
-    echo "Error: upstream $u has no Spack database (is CVMFS mounted?)"
-    exit 1
-  fi
-done
+echo "Building environments/$ENV_NAME with $SPACK_VERSION${WITHOUT:+, without $WITHOUT}"
 
 if [[ ! -v WORKSPACE ]]; then
   echo "Error: workspace directory not specified!"
@@ -108,6 +101,17 @@ if [[ ! -f $EMPH_SPACK_DIR/environments/$ENV_NAME/spack.yaml ]]; then
   echo "Error: no environments/$ENV_NAME/spack.yaml in $EMPH_SPACK_DIR"
   exit 1
 fi
+if [[ -f $EMPH_SPACK_DIR/environments/$ENV_NAME/upstreams.txt ]]; then
+  UPSTREAMS="$UPSTREAMS $(grep -v '^ *#' "$EMPH_SPACK_DIR/environments/$ENV_NAME/upstreams.txt" || true)"
+fi
+UPSTREAMS=$(printf '%s\n' $UPSTREAMS | sort -u | paste -sd' ')
+for u in $UPSTREAMS; do
+  echo "Upstream: $u"
+  if [[ ! -f $u/.spack-db/index.json ]]; then
+    echo "Error: upstream $u has no Spack database (is CVMFS mounted?)"
+    exit 1
+  fi
+done
 
 SPACK_ROOT=$WORKSPACE/spack
 SPACK_ENV_DIR=$WORKSPACE/env
