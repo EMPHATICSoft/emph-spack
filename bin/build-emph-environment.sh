@@ -29,6 +29,14 @@
 # line, in environments/<env>/upstreams.txt: the release environment uses LArSoft's
 # spack-fnal-v1.1.1 tree for py-torch and CUDA (+ml), about 7 GB we do not copy.
 #
+# --recipes-from (default: the EMPHATIC CVMFS instance) checks out every recipe repo
+# of the new instance (builtin, fnal_art, ...) at the commit the same repo has
+# there. The bootstrap clones them at branch heads, which move: on 2026-10-16
+# fermi-spack-tools switched builtin from spack-packages fnal-v2026.03.0 to
+# fnal-v2026.10.0, which changed every hash and would rebuild the art stack. The
+# instance also runs its own copies of these recipes at `spack load`, so the build
+# must match them. --recipes-from none keeps the branch heads.
+#
 # Publishing on CVMFS is a separate step: bin/publish-emph-environment.sh.
 set -euo pipefail
 
@@ -38,6 +46,7 @@ ENV_NAME=emph-v1.1.1
 EMPH_SPACK_REPO=${EMPH_SPACK_REPO:-https://github.com/EMPHATICSoft/emph-spack.git}
 JOBS=
 EMPH_GIT=
+RECIPES_FROM=/cvmfs/emphatic.opensciencegrid.org/spack/v1.1.1
 # Jenkins exports job parameters as environment variables, so a WITHOUT parameter
 # counts even if the shell step does not pass --without. Resetting it here used to
 # drop it silently and build emphaticsoft anyway (emph-spack-build #4).
@@ -47,7 +56,8 @@ UPSTREAMS=${UPSTREAMS:-}
 USAGE="Usage: $0 -w|--workspace <path> [-k|--gpg-key <secret key file>]
           [-r|--emph-spack-ref <branch, tag or commit>] [-e|--env <environments/ dir>]
           [-s|--spack-version <fnal-vX>] [--without <package>] [-j|--jobs <n>]
-          [-u|--upstream <install tree>] [--emphaticsoft-git <url>]
+          [-u|--upstream <install tree>] [--recipes-from <instance>|none]
+          [--emphaticsoft-git <url>]
 
   --gpg-key           exported private key to sign with (Jenkins credential file).
                       Without it the build runs but nothing is pushed.
@@ -56,6 +66,8 @@ USAGE="Usage: $0 -w|--workspace <path> [-k|--gpg-key <secret key file>]
   --without           concretize with this root but do not build it (repeatable).
   --upstream          reuse this install tree as a Spack upstream (repeatable);
                       what is installed there is not built or pushed.
+  --recipes-from      Spack instance whose recipe repo commits to use (default
+                      $RECIPES_FROM), or none.
   --emphaticsoft-git  fetch emphaticsoft from this URL instead of the recipe's,
                       e.g. file:///path/to/clone to build unpushed commits."
 while [[ $# -gt 0 ]]; do
@@ -69,6 +81,7 @@ while [[ $# -gt 0 ]]; do
     --without)           WITHOUT="$WITHOUT $2"; shift 2 ;;
     -u|--upstream)       UPSTREAMS="$UPSTREAMS $2"; shift 2 ;;
     --emphaticsoft-git)  EMPH_GIT=$2; shift 2 ;;
+    --recipes-from)      RECIPES_FROM=$2; shift 2 ;;
     -h|--help)           echo "$USAGE"; exit 0 ;;
     *)                   echo "Unknown option: $1"; echo "$USAGE"; exit 1 ;;
   esac
@@ -141,10 +154,30 @@ bootstrap() {
   bash ./bootstrap --with_padding "$SPACK_ROOT"
 }
 
+# Check out each recipe repo of the new instance at the commit it has in $RECIPES_FROM.
+pin_recipes() {
+  local repo name commit
+  for repo in "$SPACK_ROOT"/var/spack/repos/*/; do
+    name=$(basename "$repo")
+    [[ -d $repo/.git ]] || continue
+    commit=$(git -c safe.directory='*' -C "$RECIPES_FROM/var/spack/repos/$name" rev-parse HEAD 2>/dev/null) || {
+      echo "Error: no recipe repo $name in $RECIPES_FROM"
+      return 1
+    }
+    git -C "$repo" fetch -q origin "$commit" 2>/dev/null || git -C "$repo" fetch -q origin
+    git -C "$repo" checkout -q "$commit"
+    printf 'recipes:    %s %s\n' "$name" "$commit" >> "$SPACK_ENV_DIR/BUILD-INFO.recipes"
+  done
+}
+
 configure() {
   spack mirror add --scope site --type source scisoft_mirror_source \
     https://scisoft.fnal.gov/scisoft/spack-mirror/spack-packages/sources
   spack repo add --scope site "$EMPH_SPACK_DIR/spack_repo/emph"
+  mkdir -p "$SPACK_ENV_DIR"
+  if [[ $RECIPES_FROM != none ]]; then
+    pin_recipes
+  fi
   if [[ -n $UPSTREAMS ]]; then
     {
       echo "upstreams:"
@@ -168,6 +201,8 @@ configure() {
     echo "spack:      $SPACK_VERSION $(git -C "$SPACK_ROOT" rev-parse HEAD)"
     echo "env:        environments/$ENV_NAME${WITHOUT:+, without $WITHOUT}"
     echo "upstreams:  ${UPSTREAMS:-none}"
+    echo "recipes-from: $RECIPES_FROM"
+    cat "$SPACK_ENV_DIR/BUILD-INFO.recipes" 2>/dev/null && rm -f "$SPACK_ENV_DIR/BUILD-INFO.recipes"
     echo "host:       $(hostname) $(. /etc/os-release && echo "$PRETTY_NAME")"
     echo "date:       $(date -u '+%F %T UTC')"
   } > "$SPACK_ENV_DIR/BUILD-INFO"
