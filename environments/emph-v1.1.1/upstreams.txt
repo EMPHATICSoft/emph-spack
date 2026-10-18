@@ -1,3 +1,8 @@
 # Install trees build-emph-environment.sh adds as Spack upstreams, one per line.
+# The EMPHATIC instance itself: the release then reuses the installed base, and only
+# what is new is built, pushed and published. Without it the solver took LArSoft's
+# xerces-c over our cached one and rebuilt geant4. The publish script does not add
+# this one to the instance, which installs into it.
+/cvmfs/emphatic.opensciencegrid.org/spack/v1.1.1/opt/spack/__spack_path_placeholder__/__spack_path_placeholder__/__spack_path_pl
 # LArSoft's: py-torch 2.10.0 +cuda and CUDA for emphaticsoft +ml.
 /cvmfs/larsoft.opensciencegrid.org/spack-fnal-v1.1.1/opt/spack
