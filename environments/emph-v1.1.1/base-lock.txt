@@ -1,0 +1,3 @@
+# Build on top of this release: its spack.lock, then the roots to solve again
+# with their specs from spack.yaml. Everything else keeps the base's hashes.
+/cvmfs/emphatic.opensciencegrid.org/spack/v1.1.1/var/spack/environments/emph-deps-art3_14_04/spack.lock emphaticsoft

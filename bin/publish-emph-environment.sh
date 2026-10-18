@@ -110,6 +110,8 @@ git -C "$REPO" checkout -q "$EMPH_SPACK_COMMIT"
 # its configuration for the install.
 UPSTREAMS_FILE=$SPACK_INSTANCE/etc/spack/upstreams.yaml
 for u in $(awk '/^upstreams:/ {for (i = 2; i <= NF; i++) if ($i != "none") print $i}' "$TMP/BUILD-INFO"); do
+  # The build may have used this instance's own install tree as an upstream.
+  [[ $u == "$SPACK_INSTANCE"/* ]] && continue
   if [[ ! -f $u/.spack-db/index.json ]]; then
     echo "Error: upstream $u has no Spack database (is CVMFS mounted?)"
     exit 1
