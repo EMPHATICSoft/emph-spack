@@ -37,6 +37,13 @@
 # instance also runs its own copies of these recipes at `spack load`, so the build
 # must match them. --recipes-from none keeps the branch heads.
 #
+# A release can be built on top of an earlier one: environments/<env>/base-lock.txt
+# names the earlier release's spack.lock. The environment is then created from that
+# lock and only the roots listed after the path (default emphaticsoft) are solved
+# again, with their specs from spack.yaml. Re-solving the whole spack.yaml never
+# reproduces the base (the solver breaks ties differently and rebuilds parts of the
+# art stack), while from the lock everything else keeps its hash.
+#
 # Publishing on CVMFS is a separate step: bin/publish-emph-environment.sh.
 set -euo pipefail
 
@@ -188,7 +195,15 @@ configure() {
   fi
 
   mkdir -p "$SPACK_ENV_DIR"
-  cp "$EMPH_SPACK_DIR/environments/$ENV_NAME/spack.yaml" "$SPACK_ENV_DIR/spack.yaml"
+  local release=$EMPH_SPACK_DIR/environments/$ENV_NAME
+  if [[ -f $release/base-lock.txt ]]; then
+    read -r BASE_LOCK RESOLVE < <(grep -v '^ *#' "$release/base-lock.txt" | head -1)
+    RESOLVE=${RESOLVE:-emphaticsoft}
+    spack env create -d "$SPACK_ENV_DIR" "$BASE_LOCK"
+    cp "$release/spack.yaml" "$SPACK_ENV_DIR/spack.yaml.release"
+  else
+    cp "$release/spack.yaml" "$SPACK_ENV_DIR/spack.yaml"
+  fi
   if [[ -n $EMPH_GIT ]]; then
     # From a file: `config add a:b:URL` would split the URL at its colons.
     printf 'packages:\n  emphaticsoft:\n    package_attributes:\n      git: "%s"\n' "$EMPH_GIT" \
@@ -202,6 +217,7 @@ configure() {
     echo "env:        environments/$ENV_NAME${WITHOUT:+, without $WITHOUT}"
     echo "upstreams:  ${UPSTREAMS:-none}"
     echo "recipes-from: $RECIPES_FROM"
+    echo "base-lock:  ${BASE_LOCK:-none}${BASE_LOCK:+, re-solving $RESOLVE}"
     cat "$SPACK_ENV_DIR/BUILD-INFO.recipes" 2>/dev/null && rm -f "$SPACK_ENV_DIR/BUILD-INFO.recipes"
     echo "host:       $(hostname) $(. /etc/os-release && echo "$PRETTY_NAME")"
     echo "date:       $(date -u '+%F %T UTC')"
@@ -209,6 +225,15 @@ configure() {
 }
 
 concretize() {
+  if [[ -v BASE_LOCK ]]; then
+    local specs
+    mapfile -t specs < <(spack python "$EMPH_SPACK_DIR/bin/rebase-env.py" \
+      "$SPACK_ENV_DIR/spack.yaml" "$SPACK_ENV_DIR/spack.yaml.release" $RESOLVE)
+    [[ ${#specs[@]} -gt 0 ]] || return 1
+    spack -e "$SPACK_ENV_DIR" remove $RESOLVE
+    spack -e "$SPACK_ENV_DIR" --disable-locks concretize
+    spack -e "$SPACK_ENV_DIR" add "${specs[@]}"
+  fi
   spack -e "$SPACK_ENV_DIR" --disable-locks concretize
   spack -e "$SPACK_ENV_DIR" find -c > "$SPACK_ENV_DIR/concretized.txt" || true
   # What to install, push and publish, as "<name> <hash>" lines.
