@@ -137,6 +137,10 @@ spack -e "$ENV_NAME" install --cache-only --include-build-deps "${INSTALL_SPECS[
 cp "$TMP/spack.yaml" "$ENV_DIR/spack.yaml.release"
 cp "$TMP/BUILD-INFO" "$TMP/install-specs.txt" "$ENV_DIR/"
 echo "artifacts:  $ARTIFACTS" >> "$ENV_DIR/BUILD-INFO"
+# Upstream prefixes (LArSoft's) carry their own .cvmfscatalog files. The default
+# view links them in, and cvmfs_server publish panics on a catalog marker that is
+# not a regular file.
+find "$ENV_DIR" -name .cvmfscatalog ! -type f -print -delete
 touch "$ENV_DIR/.cvmfscatalog"
 
 if [[ -v LINK_NAME ]]; then
