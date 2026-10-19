@@ -5,8 +5,8 @@
 # CVMFS publisher inside an open transaction:
 #
 #   cvmfs_server transaction emphatic.opensciencegrid.org
-#   bin/publish-emph-environment.sh -i 12 -e emph-deps-v08_00_00 -l emph-deps-env
-#   cvmfs_server publish -m "emph-deps-v08_00_00 (emph-spack-build #12)" emphatic.opensciencegrid.org
+#   bin/publish-emph-environment.sh -i 12 -e emphaticsoft-v08_00_00 -l emphaticsoft-env
+#   cvmfs_server publish -m "emphaticsoft-v08_00_00 (emph-spack-build #12)" emphatic.opensciencegrid.org
 #
 # On failure: cvmfs_server abort -f emphatic.opensciencegrid.org
 #
@@ -18,7 +18,7 @@
 # to the instance's etc/spack/upstreams.yaml, and the specs installed there are not
 # copied. `spack subspack` copies that file, so developer areas see them too.
 #
-# --link points a fixed name (emph-deps-env) at the new environment, so users and
+# --link points a fixed name (emphaticsoft-env) at the new environment, so users and
 # docs can use one path for the current release while older ones stay installed.
 set -euo pipefail
 
@@ -33,7 +33,7 @@ USAGE="Usage: $0 -e|--env-name <name> (-i|--build-index <n> | -a|--artifacts <di
   -i  Jenkins build number; artifacts are read from
       https://buildmaster.fnal.gov/buildmaster/job/<job>/<n>/artifact
   -a  artifact location (a directory holding env/ and bc/, or a URL) instead
-  -l  make environments/<name> a symlink to the new environment (e.g. emph-deps-env)"
+  -l  make environments/<name> a symlink to the new environment (e.g. emphaticsoft-env)"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -i|--build-index)    BUILD_INDEX=$2; shift 2 ;;
@@ -137,6 +137,10 @@ spack -e "$ENV_NAME" install --cache-only --include-build-deps "${INSTALL_SPECS[
 cp "$TMP/spack.yaml" "$ENV_DIR/spack.yaml.release"
 cp "$TMP/BUILD-INFO" "$TMP/install-specs.txt" "$ENV_DIR/"
 echo "artifacts:  $ARTIFACTS" >> "$ENV_DIR/BUILD-INFO"
+# Upstream prefixes (LArSoft's) carry their own .cvmfscatalog files. The default
+# view links them in, and cvmfs_server publish panics on a catalog marker that is
+# not a regular file.
+find "$ENV_DIR" -name .cvmfscatalog ! -type f -print -delete
 touch "$ENV_DIR/.cvmfscatalog"
 
 if [[ -v LINK_NAME ]]; then
