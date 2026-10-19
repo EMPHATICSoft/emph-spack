@@ -2,6 +2,8 @@
 
 Spack repository for emphaticsoft packages.
 
+Publishing a release to CVMFS: [doc/publishing.md](doc/publishing.md).
+
 ## Copyright and Licensing
 
 Copyright © 2024 FERMI NATIONAL ACCELERATOR LABORATORY for the benefit of the EMPHATIC Collaboration.
